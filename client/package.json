@@ -6,7 +6,8 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "postinstall": "echo '--- DIAGNOSTIC: node_modules/react state ---' && node -e \"console.log('cwd:', process.cwd())\" && ls -la node_modules/react/ 2>&1 || echo 'NO react dir' && echo '--- cjs/ ---' && ls -la node_modules/react/cjs/ 2>&1 || echo 'NO cjs dir' && echo '--- disk space ---' && df -h . && echo '--- END DIAGNOSTIC ---'"
   },
   "dependencies": {
     "clsx": "^2.1.1",
