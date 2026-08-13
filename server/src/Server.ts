@@ -3,8 +3,11 @@ import http from 'http';
 import { MessageHandler } from './MessageHandler';
 import { GetSongsHandler } from './handlers/GetSongsHandler';
 
-const PORT = 3001;
-const VALID_ORIGINS = ['http://localhost:3000'];
+const PORT = process.env.PORT ? Number(process.env.PORT) : 3001;
+const HOST = process.env.HOST ?? '0.0.0.0';
+const VALID_ORIGINS = process.env.VALID_ORIGINS
+   ? process.env.VALID_ORIGINS.split(',')
+   : ['http://localhost:3000'];
 const PING_TIMEOUT_MS = 10000;
 const PING_INTERVAL_MS = 10000;
 const WS_PATH = '/ws';
@@ -34,7 +37,7 @@ function connectHandler(socket: Socket) {
 export async function initServer(): Promise<Server> {
    const httpServer = http.createServer();
 
-   httpServer.listen(PORT, 'localhost');
+   httpServer.listen(PORT, HOST);
 
    const server = new Server({
       path: WS_PATH,
