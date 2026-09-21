@@ -26,8 +26,10 @@ export function Saw() {
   return (
     <div className="flex flex-col items-center gap-8 py-10">
       <div className="flex items-end gap-6 overflow-x-auto px-6">
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src="/newhandle.jpg" alt="saw handle" className="h-104 w-40 shrink-0 rounded-sm object-cover" />
+        <div className="w-40 shrink-0 rounded-sm border border-black/10 bg-zinc-100 p-3 shadow-sm">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/newhandle.jpg" alt="saw handle" className="w-full object-contain" />
+        </div>
         <div
           className="relative h-104 shrink-0 overflow-hidden rounded-sm border-y border-black/30"
           style={{
@@ -41,7 +43,11 @@ export function Saw() {
           <img
             src="/saw-blade-badge.jpg"
             alt=""
-            className="pointer-events-none absolute top-1/2 left-2 h-56 w-auto -translate-y-1/2 rounded-sm opacity-90 shadow-sm"
+            className="pointer-events-none absolute top-1/2 left-6 h-48 w-auto -translate-y-1/2 opacity-80"
+            style={{
+              maskImage: 'radial-gradient(ellipse 55% 55% at center, black 45%, transparent 90%)',
+              WebkitMaskImage: 'radial-gradient(ellipse 55% 55% at center, black 45%, transparent 90%)',
+            }}
           />
           {OCTAVES.map(octave =>
             NOTE_NAMES.map((note, i) => {
