@@ -8,6 +8,7 @@ import { NavItem } from './ui/nav-item';
 import { instruments } from '@/lib/instruments/registry';
 import { visualizers } from '@/lib/visualizers/registry';
 import { useAppState, useAppDispatch } from '@/lib/app-state';
+import { DEFAULT_INSTRUMENT_ID, DEFAULT_VISUALIZER_ID } from '@/lib/default-selection';
 
 function withParam(searchParams: URLSearchParams, key: string, value: string): string {
   const params = new URLSearchParams(searchParams);
@@ -17,8 +18,8 @@ function withParam(searchParams: URLSearchParams, key: string, value: string): s
 
 export function SideNav() {
   const searchParams = useSearchParams();
-  const activeInstrument = searchParams.get('instrument');
-  const activeVisualizer = searchParams.get('visualizer');
+  const activeInstrument = searchParams.get('instrument') ?? DEFAULT_INSTRUMENT_ID;
+  const activeVisualizer = searchParams.get('visualizer') ?? DEFAULT_VISUALIZER_ID;
 
   const { songs } = useAppState();
   const dispatch = useAppDispatch();
