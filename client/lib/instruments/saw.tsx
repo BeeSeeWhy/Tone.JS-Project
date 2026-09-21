@@ -27,11 +27,11 @@ export function Saw() {
   return (
     <div className="flex flex-col items-center gap-8 py-10">
       <div className="flex items-end gap-4 overflow-x-auto px-6">
-        <div className="shrink-0 overflow-hidden rounded-sm border border-black/10 shadow-sm">
+        <div className="flex h-40 w-40 shrink-0 items-center justify-center rounded-sm border border-black/10 bg-zinc-100 p-2 shadow-sm">
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/saw-handle.jpg" alt="saw handle" className="h-104 w-auto" />
+          <img src="/saw-handle.jpg" alt="saw handle" className="max-h-full max-w-full object-contain" />
         </div>
-        <div className="relative h-104 shrink-0 overflow-hidden rounded-sm border-y border-black/30">
+        <div className="relative h-40 shrink-0 overflow-hidden rounded-sm border-y border-black/30">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src="/saw-blade.jpg" alt="saw blade" className="h-full w-auto select-none" draggable={false} />
           {OCTAVES.map(octave =>
@@ -46,6 +46,9 @@ export function Saw() {
       </div>
       <p className="max-w-md text-center text-sm text-zinc-500">
         Click along the blade to bow the saw. Every key plays the same sampled tone, pitch-shifted.
+      </p>
+      <p className="max-w-md text-center text-xs text-zinc-700">
+        Blade photo by Sägenprofi, Wikimedia Commons (CC BY-SA 3.0).
       </p>
     </div>
   );
