@@ -5,39 +5,96 @@ import * as Tone from 'tone';
 
 // Standard tuning, high string drawn on top (matches how tab is usually read).
 const STRINGS = [
-  { note: 'E4', strokeWidth: 1 },
-  { note: 'B3', strokeWidth: 1.3 },
-  { note: 'G3', strokeWidth: 1.6 },
-  { note: 'D3', strokeWidth: 2.2 },
-  { note: 'A2', strokeWidth: 2.8 },
-  { note: 'E2', strokeWidth: 3.4 },
+  { note: 'E4', strokeWidth: 1.2 },
+  { note: 'B3', strokeWidth: 1.6 },
+  { note: 'G3', strokeWidth: 2 },
+  { note: 'D3', strokeWidth: 2.8 },
+  { note: 'A2', strokeWidth: 3.6 },
+  { note: 'E2', strokeWidth: 4.4 },
 ];
 
-const VB_W = 900;
+const VB_W = 860;
 const VB_H = 220;
+const CY = 110;
 const NECK_X1 = 230;
-const NUT_X = 34;
-const BRIDGE_X = 760;
-const STRING_TOP_Y = 88;
-const STRING_BOTTOM_Y = 132;
-const HOLE_CX = 500;
-const HOLE_CY = 110;
-const HOLE_R = 52;
+const NUT_X = 72;
+const BRIDGE_X = 758;
+const STRING_TOP_Y = 75;
+const STRING_BOTTOM_Y = 145;
+const HOLE_CX = 518;
+const HOLE_R = 56;
 // Strings are only pluckable where they cross the body, over the sound hole.
-const PLUCK_X0 = 360;
+const PLUCK_X0 = 420;
 const PLUCK_X1 = 740;
 
-const BODY_PATH = `
-  M${NECK_X1},60
-  C300,18 385,8 435,28
-  C485,6 565,2 615,32
-  C705,50 765,108 742,152
-  C722,196 642,218 560,206
-  C498,222 438,222 378,206
-  C298,216 233,190 218,150
-  C203,113 198,84 ${NECK_X1},60
-  Z
+function lerp(a: number, b: number, t: number) {
+  return a + (b - a) * t;
+}
+
+function smoothstep(t: number) {
+  return t * t * (3 - 2 * t);
+}
+
+// Body outline as (x, half-height) landmarks, eased between with smoothstep
+// so the outline is a proper smooth, symmetric hourglass rather than a
+// hand-fudged bezier. First point matches the neck's half-height so the two
+// pieces join with no seam; last point rounds the tail off.
+const BODY_KEYFRAMES: [number, number][] = [
+  [230, 40],
+  [300, 68],
+  [365, 86],
+  [430, 74],
+  [500, 62],
+  [575, 83],
+  [660, 112],
+  [740, 96],
+  [800, 50],
+  [828, 34],
+];
+const BODY_X0 = BODY_KEYFRAMES[0][0];
+const BODY_X1 = BODY_KEYFRAMES[BODY_KEYFRAMES.length - 1][0];
+const BODY_SAMPLES = 60;
+
+function bodyHalfHeight(x: number): number {
+  for (let i = 0; i < BODY_KEYFRAMES.length - 1; i++) {
+    const [x0, h0] = BODY_KEYFRAMES[i];
+    const [x1, h1] = BODY_KEYFRAMES[i + 1];
+    if (x >= x0 && x <= x1) {
+      return lerp(h0, h1, smoothstep((x - x0) / (x1 - x0)));
+    }
+  }
+  return BODY_KEYFRAMES[BODY_KEYFRAMES.length - 1][1];
+}
+
+function buildBodyPath(): string {
+  const top: string[] = [];
+  const bottom: string[] = [];
+  for (let i = 0; i <= BODY_SAMPLES; i++) {
+    const x = lerp(BODY_X0, BODY_X1, i / BODY_SAMPLES);
+    const h = bodyHalfHeight(x);
+    top.push(`${x.toFixed(1)},${(CY - h).toFixed(1)}`);
+    bottom.push(`${x.toFixed(1)},${(CY + h).toFixed(1)}`);
+  }
+  bottom.reverse();
+  return `M${top.join(' L')} L${bottom.join(' L')} Z`;
+}
+
+const BODY_PATH = buildBodyPath();
+
+const HEADSTOCK_PATH = `
+  M0,${CY - 40} C20,${CY - 42} 55,${CY - 58} 68,${CY - 40}
+  C78,${CY - 25} 78,${CY + 25} 68,${CY + 40}
+  C55,${CY + 58} 20,${CY + 42} 0,${CY + 40} Z
 `;
+
+const PICKGUARD_PATH = `
+  M598,${CY + 18} C648,${CY + 8} 700,${CY + 24} 706,${CY + 56}
+  C710,${CY + 88} 662,${CY + 104} 616,${CY + 92}
+  C580,${CY + 82} 575,${CY + 40} 598,${CY + 18} Z
+`;
+
+const FRET_XS = [96, 128, 156, 182, 206];
+const FRET_MARKERS = [128, 182];
 
 function stringY(index: number) {
   const t = index / (STRINGS.length - 1);
@@ -89,7 +146,7 @@ export function Guitar() {
 
   return (
     <div className="flex flex-col items-center gap-8 py-10">
-      <div className="relative h-44" style={{ width: '45rem' }}>
+      <div className="relative h-64 shrink-0" style={{ aspectRatio: `${VB_W} / ${VB_H}` }}>
         <svg
           viewBox={`0 0 ${VB_W} ${VB_H}`}
           className="absolute inset-0 h-full w-full"
@@ -98,26 +155,72 @@ export function Guitar() {
         >
           <defs>
             <linearGradient id="guitarWood" x1="0" y1="0" x2="1" y2="1">
-              <stop offset="0%" stopColor="#d9a15c" />
+              <stop offset="0%" stopColor="#dba565" />
               <stop offset="55%" stopColor="#b3763a" />
-              <stop offset="100%" stopColor="#8a5726" />
+              <stop offset="100%" stopColor="#875323" />
+            </linearGradient>
+            <linearGradient id="guitarNeckWood" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stopColor="#6b431f" />
+              <stop offset="100%" stopColor="#4f2f16" />
             </linearGradient>
           </defs>
 
           {/* neck + headstock */}
-          <rect x={0} y={96} width={NECK_X1} height={28} fill="#5b3a1e" />
-          <rect x={0} y={70} width={40} height={80} rx={10} fill="#4a2f18" />
+          <rect
+            x={0}
+            y={CY - 40}
+            width={NECK_X1}
+            height={80}
+            fill="url(#guitarNeckWood)"
+            stroke="#3a2210"
+            strokeWidth={1.5}
+          />
+          {FRET_XS.map(x => (
+            <line key={x} x1={x} y1={CY - 40} x2={x} y2={CY + 40} stroke="#d4d4d8" strokeWidth={1.5} opacity={0.55} />
+          ))}
+          {FRET_MARKERS.map(x => (
+            <circle key={x} cx={x} cy={CY} r={4} fill="#e4e4e7" opacity={0.5} />
+          ))}
+          <path d={HEADSTOCK_PATH} fill="url(#guitarNeckWood)" stroke="#3a2210" strokeWidth={1.5} strokeLinejoin="round" />
+          <rect x={NUT_X - 3} y={CY - 40} width={4} height={80} fill="#f3ead9" opacity={0.85} />
           {STRINGS.map((_, i) => (
-            <circle key={i} cx={16} cy={80 + i * 14} r={4.5} fill="#d4d4d8" stroke="#3f3f46" strokeWidth={1} />
+            <circle
+              key={i}
+              cx={26 + (i % 2) * 30}
+              cy={CY - 34 + i * 13.6}
+              r={5}
+              fill="#d4d4d8"
+              stroke="#27272a"
+              strokeWidth={1}
+            />
           ))}
 
           {/* body */}
-          <path d={BODY_PATH} fill="url(#guitarWood)" stroke="#5c3a1c" strokeWidth={2} strokeLinejoin="round" />
-          <circle cx={HOLE_CX} cy={HOLE_CY} r={HOLE_R} fill="#1c1207" />
-          <circle cx={HOLE_CX} cy={HOLE_CY} r={HOLE_R + 6} fill="none" stroke="#3f2711" strokeWidth={3} />
+          <path d={BODY_PATH} fill="url(#guitarWood)" stroke="#5c3a1c" strokeWidth={2.5} strokeLinejoin="round" />
+          <path
+            d={BODY_PATH}
+            fill="none"
+            stroke="#f3d9ae"
+            strokeWidth={1}
+            strokeLinejoin="round"
+            opacity={0.35}
+            transform="scale(0.985)"
+            style={{ transformOrigin: `${(BODY_X0 + BODY_X1) / 2}px ${CY}px` }}
+          />
+          <path d={PICKGUARD_PATH} fill="#1b1108" opacity={0.55} />
+          <circle cx={HOLE_CX} cy={CY} r={HOLE_R} fill="#150d06" />
+          <circle cx={HOLE_CX} cy={CY} r={HOLE_R + 7} fill="none" stroke="#3f2711" strokeWidth={4} />
+          <circle cx={HOLE_CX} cy={CY} r={HOLE_R + 11} fill="none" stroke="#f3d9ae" strokeWidth={1} opacity={0.4} />
 
           {/* bridge */}
-          <rect x={BRIDGE_X} y={STRING_TOP_Y - 6} width={14} height={STRING_BOTTOM_Y - STRING_TOP_Y + 12} rx={3} fill="#2a1a0d" />
+          <rect
+            x={BRIDGE_X}
+            y={STRING_TOP_Y - 8}
+            width={16}
+            height={STRING_BOTTOM_Y - STRING_TOP_Y + 16}
+            rx={4}
+            fill="#241408"
+          />
 
           {/* strings */}
           {STRINGS.map((s, i) => (
