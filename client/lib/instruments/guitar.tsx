@@ -31,14 +31,12 @@ function lerp(a: number, b: number, t: number) {
   return a + (b - a) * t;
 }
 
-function smoothstep(t: number) {
-  return t * t * (3 - 2 * t);
-}
-
-// Body outline as (x, half-height) landmarks, eased between with smoothstep
-// so the outline is a proper smooth, symmetric hourglass rather than a
-// hand-fudged bezier. First point matches the neck's half-height so the two
-// pieces join with no seam; last point rounds the tail off.
+// Body outline as (x, half-height) landmarks, run through a Catmull-Rom-style
+// spline (continuous slope at every landmark) so the outline flows smoothly
+// through each point instead of easing to a dead stop at each one — that flat
+// "shoulder" at every landmark is what read as lumpy with a plain smoothstep.
+// First point matches the neck's half-height so the two pieces join with no
+// seam; last point rounds the tail off.
 const BODY_KEYFRAMES: [number, number][] = [
   [230, 40],
   [300, 68],
@@ -53,14 +51,32 @@ const BODY_KEYFRAMES: [number, number][] = [
 ];
 const BODY_X0 = BODY_KEYFRAMES[0][0];
 const BODY_X1 = BODY_KEYFRAMES[BODY_KEYFRAMES.length - 1][0];
-const BODY_SAMPLES = 60;
+const BODY_SAMPLES = 120;
 
+function keyframeTangent(i: number): number {
+  const n = BODY_KEYFRAMES.length;
+  const prev = BODY_KEYFRAMES[Math.max(i - 1, 0)];
+  const next = BODY_KEYFRAMES[Math.min(i + 1, n - 1)];
+  return (next[1] - prev[1]) / (next[0] - prev[0]);
+}
+
+// Cubic Hermite interpolation between two keyframes using Catmull-Rom tangents.
 function bodyHalfHeight(x: number): number {
   for (let i = 0; i < BODY_KEYFRAMES.length - 1; i++) {
     const [x0, h0] = BODY_KEYFRAMES[i];
     const [x1, h1] = BODY_KEYFRAMES[i + 1];
     if (x >= x0 && x <= x1) {
-      return lerp(h0, h1, smoothstep((x - x0) / (x1 - x0)));
+      const dx = x1 - x0;
+      const t = (x - x0) / dx;
+      const t2 = t * t;
+      const t3 = t2 * t;
+      const m0 = keyframeTangent(i) * dx;
+      const m1 = keyframeTangent(i + 1) * dx;
+      const h00 = 2 * t3 - 3 * t2 + 1;
+      const h10 = t3 - 2 * t2 + t;
+      const h01 = -2 * t3 + 3 * t2;
+      const h11 = t3 - t2;
+      return h00 * h0 + h10 * m0 + h01 * h1 + h11 * m1;
     }
   }
   return BODY_KEYFRAMES[BODY_KEYFRAMES.length - 1][1];
