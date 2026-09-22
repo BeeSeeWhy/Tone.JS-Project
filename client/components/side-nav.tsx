@@ -28,7 +28,7 @@ export function SideNav() {
     <aside className="fixed inset-y-0 left-0 z-10 flex w-64 flex-col border-r border-white/10 bg-zinc-950">
       <div className="flex h-16 items-center gap-2 border-b border-white/10 px-4">
         <Image src="/logo.svg" alt="" width={28} height={28} />
-        <span className="text-lg font-semibold text-zinc-100">Band Camp</span>
+        <span className="text-lg font-semibold text-zinc-100">Tone.js Fun</span>
       </div>
 
       <div className="flex flex-1 flex-col overflow-hidden">

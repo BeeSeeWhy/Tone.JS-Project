@@ -11,8 +11,10 @@ export interface Visualizer {
 
 import { waveformDraw } from './waveform';
 import { orbitsDraw } from './orbits';
+import { notesDraw } from './notes';
 
 export const visualizers: Visualizer[] = [
   { id: 'waveform', name: 'Waveform', draw: waveformDraw },
   { id: 'orbits', name: 'Orbits', draw: orbitsDraw },
+  { id: 'notes', name: 'Notes', draw: notesDraw },
 ];

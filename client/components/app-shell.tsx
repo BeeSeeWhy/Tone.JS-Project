@@ -14,7 +14,7 @@ function WelcomePanel() {
   return (
     <div className="flex flex-1 flex-col items-center justify-center gap-3 px-8 text-center">
       <Music className="size-10 text-violet-400" />
-      <h1 className="text-2xl font-semibold text-zinc-100">Welcome to Band Camp.</h1>
+      <h1 className="text-2xl font-semibold text-zinc-100">Welcome to Tone.js Fun.</h1>
       <p className="max-w-sm text-zinc-500">
         Select an instrument and a visualizer on the left to serve some fresh beats.
       </p>
