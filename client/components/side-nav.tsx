@@ -8,6 +8,7 @@ import { NavItem } from './ui/nav-item';
 import { instruments } from '@/lib/instruments/registry';
 import { visualizers } from '@/lib/visualizers/registry';
 import { useAppState, useAppDispatch } from '@/lib/app-state';
+import { DEFAULT_INSTRUMENT_ID, DEFAULT_VISUALIZER_ID } from '@/lib/default-selection';
 
 function withParam(searchParams: URLSearchParams, key: string, value: string): string {
   const params = new URLSearchParams(searchParams);
@@ -17,8 +18,8 @@ function withParam(searchParams: URLSearchParams, key: string, value: string): s
 
 export function SideNav() {
   const searchParams = useSearchParams();
-  const activeInstrument = searchParams.get('instrument');
-  const activeVisualizer = searchParams.get('visualizer');
+  const activeInstrument = searchParams.get('instrument') ?? DEFAULT_INSTRUMENT_ID;
+  const activeVisualizer = searchParams.get('visualizer') ?? DEFAULT_VISUALIZER_ID;
 
   const { songs } = useAppState();
   const dispatch = useAppDispatch();
@@ -27,7 +28,7 @@ export function SideNav() {
     <aside className="fixed inset-y-0 left-0 z-10 flex w-64 flex-col border-r border-white/10 bg-zinc-950">
       <div className="flex h-16 items-center gap-2 border-b border-white/10 px-4">
         <Image src="/logo.svg" alt="" width={28} height={28} />
-        <span className="text-lg font-semibold text-zinc-100">Band Camp</span>
+        <span className="text-lg font-semibold text-zinc-100">Tone.js Fun</span>
       </div>
 
       <div className="flex flex-1 flex-col overflow-hidden">

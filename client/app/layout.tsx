@@ -14,7 +14,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: 'Band Camp',
+  title: 'Tone.js Fun',
   description: 'Play instruments and watch the music, live, with your band.',
 };
 

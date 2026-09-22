@@ -1,4 +1,4 @@
-# Band Camp
+# Tone.js Fun
 
 A musical jam application. Play instruments, watch the audio visualized live, and pull up a shared playlist.
 

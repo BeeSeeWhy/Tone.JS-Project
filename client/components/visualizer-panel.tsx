@@ -6,7 +6,13 @@ import type P5 from 'p5';
 import type { Visualizer } from '@/lib/visualizers/registry';
 import { useP5Sketch } from '@/hooks/use-p5-sketch';
 
-export function VisualizerPanel({ visualizer }: { visualizer: Visualizer }) {
+export function VisualizerPanel({
+  visualizer,
+  instrumentColor,
+}: {
+  visualizer: Visualizer;
+  instrumentColor: string;
+}) {
   const analyzer = useMemo(() => new Tone.Analyser('waveform', 256), []);
 
   useEffect(() => {
@@ -22,7 +28,10 @@ export function VisualizerPanel({ visualizer }: { visualizer: Visualizer }) {
     p5.createCanvas(container.clientWidth, container.clientHeight);
   }, []);
 
-  const draw = useCallback((p5: P5) => visualizer.draw(p5, analyzer), [visualizer, analyzer]);
+  const draw = useCallback(
+    (p5: P5) => visualizer.draw(p5, analyzer, { instrumentColor }),
+    [visualizer, analyzer, instrumentColor],
+  );
 
   const onResize = useCallback((p5: P5, container: HTMLDivElement) => {
     p5.resizeCanvas(container.clientWidth, container.clientHeight);
