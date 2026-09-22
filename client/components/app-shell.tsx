@@ -38,7 +38,7 @@ export function AppShell() {
         {instrument ? (
           <>
             <InstrumentPanel instrument={instrument} />
-            {visualizer && <VisualizerPanel visualizer={visualizer} />}
+            {visualizer && <VisualizerPanel visualizer={visualizer} instrumentColor={instrument.color} />}
           </>
         ) : (
           <WelcomePanel />

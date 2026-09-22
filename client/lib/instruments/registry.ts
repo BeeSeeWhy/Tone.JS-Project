@@ -9,6 +9,8 @@ export interface InstrumentComponentProps {
 export interface Instrument {
   id: string;
   name: string;
+  // Theme color used to tint instrument-aware visualizers.
+  color: string;
   Component: ComponentType<InstrumentComponentProps>;
 }
 
@@ -18,8 +20,8 @@ import { Guitar } from './guitar';
 import { Drums } from './drums';
 
 export const instruments: Instrument[] = [
-  { id: 'piano', name: 'Piano', Component: Piano },
-  { id: 'saw', name: 'Saw', Component: Saw },
-  { id: 'guitar', name: 'Guitar', Component: Guitar },
-  { id: 'drums', name: 'Drums', Component: Drums },
+  { id: 'piano', name: 'Piano', color: '#a78bfa', Component: Piano },
+  { id: 'saw', name: 'Saw', color: '#38bdf8', Component: Saw },
+  { id: 'guitar', name: 'Guitar', color: '#fbbf24', Component: Guitar },
+  { id: 'drums', name: 'Drums', color: '#fb7185', Component: Drums },
 ];
