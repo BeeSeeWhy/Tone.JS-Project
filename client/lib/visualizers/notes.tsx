@@ -8,14 +8,14 @@ export const notesDraw: VisualizerDraw = (p5, analyzer) => {
   const width = p5.width;
   const height = p5.height;
 
-  // colorMode carries over between frames, so the trailing background must
-  // be drawn in a pinned RGB scope — otherwise, from frame 2 on, it's drawn
-  // while still in the HSB mode set below (left over from the previous
-  // frame) and (9, 9, 11) gets read as a hue/sat/brightness instead of a
-  // neutral dark gray, drifting the trail into a muddy tint over time.
+  // colorMode carries over between frames, so this has to be drawn in a
+  // pinned RGB scope — otherwise, from frame 2 on, it's drawn while still in
+  // the HSB mode set below (left over from the previous frame) and
+  // (9, 9, 11) gets read as a hue/sat/brightness instead of a neutral dark
+  // gray, drifting out of sync with the other visualizers' background.
   p5.push();
   p5.colorMode(p5.RGB, 255);
-  p5.background(9, 9, 11, 60);
+  p5.background(9, 9, 11);
   p5.pop();
 
   p5.colorMode(p5.HSB, 360, 100, 100, 255);
