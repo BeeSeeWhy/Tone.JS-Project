@@ -4,7 +4,7 @@ export const orbitsDraw: VisualizerDraw = (p5, analyzer) => {
   const width = p5.width;
   const height = p5.height;
 
-  p5.background(0, 0, 0, 40);
+  p5.background(9, 9, 11, 60);
   p5.angleMode('radians');
   p5.noFill();
   p5.frameRate(30);
