@@ -14,8 +14,10 @@ export interface Instrument {
 
 import { Piano } from './piano';
 import { Saw } from './saw';
+import { Guitar } from './guitar';
 
 export const instruments: Instrument[] = [
   { id: 'piano', name: 'Piano', Component: Piano },
   { id: 'saw', name: 'Saw', Component: Saw },
+  { id: 'guitar', name: 'Guitar', Component: Guitar },
 ];
