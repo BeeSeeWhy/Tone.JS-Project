@@ -76,7 +76,12 @@ function GuitarString({
 }
 
 export function Guitar() {
-  const [plucks] = useState(() => STRINGS.map(() => new Tone.PluckSynth().toDestination()));
+  const [plucks] = useState(() => {
+    const body = new Tone.Freeverb({ roomSize: 0.7, dampening: 3000, wet: 0.25 }).toDestination();
+    return STRINGS.map(
+      () => new Tone.PluckSynth({ attackNoise: 0.5, dampening: 7000, resonance: 0.96 }).connect(body),
+    );
+  });
 
   const pluck = (index: number, note: string) => {
     plucks[index]?.triggerAttack(note);
