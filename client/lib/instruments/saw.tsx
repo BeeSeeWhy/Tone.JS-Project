@@ -1,7 +1,8 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import * as Tone from 'tone';
+import { useAppState, useAppDispatch } from '@/lib/app-state';
 
 const NOTE_NAMES = ['C', 'Db', 'D', 'Eb', 'E', 'F', 'Gb', 'G', 'Ab', 'A', 'Bb', 'B'];
 const NOTES_PER_OCTAVE = NOTE_NAMES.length;
@@ -73,9 +74,37 @@ function SawKey({ note, index, sampler }: { note: string; index: number; sampler
 }
 
 export function Saw() {
+  const { playingNotes } = useAppState();
+  const dispatch = useAppDispatch();
+
   const [sampler] = useState(
     () => new Tone.Sampler({ urls: { C5: '/musical-saw.wav' } }).toDestination(),
   );
+
+  useEffect(() => {
+    if (!playingNotes) return;
+
+    const eachNote = playingNotes.split(' ');
+    const noteObjs = eachNote.map((note, idx) => ({
+      idx,
+      time: `+${idx / 4}`,
+      note,
+      velocity: 1,
+    }));
+
+    new Tone.Part((time, value) => {
+      sampler.triggerAttackRelease([value.note], '8n', time, value.velocity);
+      if (value.idx === eachNote.length - 1) {
+        dispatch({ type: 'STOP_SONG' });
+      }
+    }, noteObjs).start(0);
+
+    Tone.Transport.start();
+
+    return () => {
+      Tone.Transport.cancel();
+    };
+  }, [playingNotes, sampler, dispatch]);
 
   return (
     <div className="flex flex-col items-center gap-8 py-10">

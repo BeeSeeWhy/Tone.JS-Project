@@ -1,7 +1,8 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import * as Tone from 'tone';
+import { useAppState, useAppDispatch } from '@/lib/app-state';
 
 const VB_W = 800;
 const VB_H = 460;
@@ -47,15 +48,29 @@ function createKit() {
   }).toDestination();
 
   return {
-    kick: () => kick.triggerAttackRelease('C1', '8n'),
-    tom: () => tom.triggerAttackRelease('G2', '8n'),
-    snare: () => {
-      snareNoise.triggerAttackRelease('16n');
-      snareBody.triggerAttackRelease('G2', '16n');
+    kick: (time?: number) => kick.triggerAttackRelease('C1', '8n', time),
+    tom: (time?: number) => tom.triggerAttackRelease('G2', '8n', time),
+    snare: (time?: number) => {
+      snareNoise.triggerAttackRelease('16n', time);
+      snareBody.triggerAttackRelease('G2', '16n', time);
     },
-    hihat: (open: boolean) => hihat.triggerAttackRelease('C5', open ? '4n' : '32n'),
-    crash: () => crash.triggerAttackRelease('C4', '2n'),
+    hihat: (open: boolean, time?: number) => hihat.triggerAttackRelease('C5', open ? '4n' : '32n', time),
+    crash: (time?: number) => crash.triggerAttackRelease('C4', '2n', time),
   };
+}
+
+type DrumKit = ReturnType<typeof createKit>;
+
+// "Drum cover" mapping for playlist songs: drums have no pitch, so a
+// melody's notes are bucketed by MIDI range onto the kit pieces instead —
+// low notes on the kick, rising through toms/snare/hi-hat, crash on top.
+function drumHitForNote(kit: DrumKit, note: string): (time?: number) => void {
+  const midi = Tone.Frequency(note).toMidi();
+  if (midi < 48) return kit.kick;
+  if (midi < 56) return kit.tom;
+  if (midi < 64) return kit.snare;
+  if (midi < 72) return time => kit.hihat(false, time);
+  return kit.crash;
 }
 
 function DrumPad({
@@ -89,7 +104,30 @@ function DrumPad({
 }
 
 export function Drums() {
+  const { playingNotes } = useAppState();
+  const dispatch = useAppDispatch();
+
   const [kit] = useState(() => createKit());
+
+  useEffect(() => {
+    if (!playingNotes) return;
+
+    const eachNote = playingNotes.split(' ');
+    const noteObjs = eachNote.map((note, idx) => ({ idx, time: `+${idx / 4}`, note }));
+
+    new Tone.Part((time, value) => {
+      drumHitForNote(kit, value.note)(time);
+      if (value.idx === eachNote.length - 1) {
+        dispatch({ type: 'STOP_SONG' });
+      }
+    }, noteObjs).start(0);
+
+    Tone.Transport.start();
+
+    return () => {
+      Tone.Transport.cancel();
+    };
+  }, [playingNotes, kit, dispatch]);
 
   return (
     <div className="flex flex-col items-center gap-8 py-10">
