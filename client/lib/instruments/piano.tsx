@@ -46,11 +46,13 @@ function PianoKey({
   minor,
   index,
   synth,
+  active,
 }: {
   note: string;
   minor: boolean;
   index: number;
   synth: Tone.Synth;
+  active: boolean;
 }) {
   return (
     <div
@@ -58,10 +60,13 @@ function PianoKey({
       onMouseUp={() => synth.triggerRelease('+0.25')}
       onMouseLeave={() => synth.triggerRelease('+0.25')}
       className={clsx(
-        'absolute top-0 cursor-pointer select-none rounded-b-md border border-black/20 shadow-sm transition-colors active:brightness-90',
-        minor
-          ? 'z-10 h-24 w-8 bg-zinc-900 hover:bg-zinc-800'
-          : 'h-36 w-12 bg-zinc-50 hover:bg-white',
+        'absolute top-0 cursor-pointer select-none rounded-b-md border shadow-sm transition-colors active:brightness-90',
+        minor ? 'z-10 h-24 w-8' : 'h-36 w-12',
+        active
+          ? 'border-violet-300 bg-violet-500'
+          : minor
+            ? 'border-black/20 bg-zinc-900 hover:bg-zinc-800'
+            : 'border-black/20 bg-zinc-50 hover:bg-white',
       )}
       style={{ left: `${index * 2}rem`, marginLeft: minor ? '0.25rem' : 0 }}
     />
@@ -99,6 +104,7 @@ export function Piano() {
   const [synth, setSynth] = useState(
     () => new Tone.Synth({ oscillator: { type: 'sine' } as Tone.OmniOscillatorOptions }).toDestination(),
   );
+  const [activeMidi, setActiveMidi] = useState<number | null>(null);
 
   const setOscillator = (type: string) => {
     setSynth(oldSynth => {
@@ -122,6 +128,10 @@ export function Piano() {
 
     new Tone.Part((time, value) => {
       synth.triggerAttackRelease(value.note, '4n', time, value.velocity);
+      const midi = Tone.Frequency(value.note).toMidi();
+      const releaseAt = time + Tone.Time('4n').toSeconds();
+      Tone.Draw.schedule(() => setActiveMidi(midi), time);
+      Tone.Draw.schedule(() => setActiveMidi(current => (current === midi ? null : current)), releaseAt);
       if (value.idx === eachNote.length - 1) {
         dispatch({ type: 'STOP_SONG' });
       }
@@ -131,6 +141,7 @@ export function Piano() {
 
     return () => {
       Tone.Transport.cancel();
+      setActiveMidi(null);
     };
   }, [playingNotes, synth, dispatch]);
 
@@ -141,15 +152,19 @@ export function Piano() {
         style={{ width: `${OCTAVES.length * NATURALS_PER_OCTAVE * 2}rem` }}
       >
         {OCTAVES.map(octave =>
-          NOTE_LAYOUT.map(key => (
-            <PianoKey
-              key={`${key.note}${octave}`}
-              note={`${key.note}${octave}`}
-              minor={key.minor}
-              synth={synth}
-              index={(octave - OCTAVES[0]) * NATURALS_PER_OCTAVE + key.idx}
-            />
-          )),
+          NOTE_LAYOUT.map(key => {
+            const fullNote = `${key.note}${octave}`;
+            return (
+              <PianoKey
+                key={fullNote}
+                note={fullNote}
+                minor={key.minor}
+                synth={synth}
+                active={activeMidi !== null && Tone.Frequency(fullNote).toMidi() === activeMidi}
+                index={(octave - OCTAVES[0]) * NATURALS_PER_OCTAVE + key.idx}
+              />
+            );
+          }),
         )}
       </div>
       <div className="flex flex-wrap justify-center gap-2 px-4">
