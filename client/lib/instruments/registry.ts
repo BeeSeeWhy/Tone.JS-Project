@@ -1,17 +1,13 @@
 import type { ComponentType } from 'react';
-import type * as Tone from 'tone';
-
-export interface InstrumentComponentProps {
-  synth: Tone.Synth;
-  setSynth: (updater: (oldSynth: Tone.Synth) => Tone.Synth) => void;
-}
 
 export interface Instrument {
   id: string;
   name: string;
   // Theme color used to tint instrument-aware visualizers.
   color: string;
-  Component: ComponentType<InstrumentComponentProps>;
+  // Each instrument owns its own sound engine and reacts to playlist
+  // playback itself (see the `playingNotes` effect in each component).
+  Component: ComponentType;
 }
 
 import { Piano } from './piano';

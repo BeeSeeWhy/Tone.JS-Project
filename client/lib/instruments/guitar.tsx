@@ -1,7 +1,8 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import * as Tone from 'tone';
+import { useAppState, useAppDispatch } from '@/lib/app-state';
 
 // Standard tuning, high string drawn on top (matches how tab is usually read).
 const STRINGS = [
@@ -149,6 +150,9 @@ function GuitarString({
 }
 
 export function Guitar() {
+  const { playingNotes } = useAppState();
+  const dispatch = useAppDispatch();
+
   const [plucks] = useState(() => {
     const body = new Tone.Freeverb({ roomSize: 0.7, dampening: 3000, wet: 0.25 }).toDestination();
     return STRINGS.map(
@@ -159,6 +163,32 @@ export function Guitar() {
   const pluck = (index: number, note: string) => {
     plucks[index]?.triggerAttack(note);
   };
+
+  useEffect(() => {
+    if (!playingNotes) return;
+
+    const eachNote = playingNotes.split(' ');
+    const noteObjs = eachNote.map((note, idx) => ({
+      idx,
+      time: `+${idx / 4}`,
+      note,
+    }));
+
+    // Round-robin across the six strings so consecutive notes ring on
+    // separate physical strings instead of cutting each other off.
+    new Tone.Part((time, value) => {
+      plucks[value.idx % plucks.length]?.triggerAttack(value.note, time);
+      if (value.idx === eachNote.length - 1) {
+        dispatch({ type: 'STOP_SONG' });
+      }
+    }, noteObjs).start(0);
+
+    Tone.Transport.start();
+
+    return () => {
+      Tone.Transport.cancel();
+    };
+  }, [playingNotes, plucks, dispatch]);
 
   return (
     <div className="flex flex-col items-center gap-8 py-10">
