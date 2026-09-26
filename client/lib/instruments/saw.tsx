@@ -2,12 +2,17 @@
 
 import { useEffect, useState } from 'react';
 import * as Tone from 'tone';
+import clsx from 'clsx';
 import { useAppState, useAppDispatch } from '@/lib/app-state';
 
 const NOTE_NAMES = ['C', 'Db', 'D', 'Eb', 'E', 'F', 'Gb', 'G', 'Ab', 'A', 'Bb', 'B'];
 const NOTES_PER_OCTAVE = NOTE_NAMES.length;
 const OCTAVES = [3, 4, 5, 6];
 const TOTAL_KEYS = OCTAVES.length * NOTES_PER_OCTAVE;
+// MIDI value of the lowest key (C at OCTAVES[0]) — subtracting this from a
+// song note's MIDI number gives the same 0-based index used to lay the keys
+// out below, without caring whether the note is spelled with a sharp or flat.
+const BASE_MIDI = 12 * (OCTAVES[0] + 1);
 
 // Blade is drawn full-height at the left edge (where the handle attaches)
 // tapering to a point at the right edge (the tip), with a row of ripsaw
@@ -62,11 +67,24 @@ const HANDLE_PATH = `
   C51,80 58,66 58,66 Z
 `;
 
-function SawKey({ note, index, sampler }: { note: string; index: number; sampler: Tone.Sampler }) {
+function SawKey({
+  note,
+  index,
+  sampler,
+  active,
+}: {
+  note: string;
+  index: number;
+  sampler: Tone.Sampler;
+  active: boolean;
+}) {
   return (
     <button
       onMouseDown={() => sampler.triggerAttackRelease([note], 1)}
-      className="absolute top-0 h-full cursor-pointer border-r border-black/15 transition-colors last:border-r-0 hover:bg-white/15 active:bg-white/25"
+      className={clsx(
+        'absolute top-0 h-full cursor-pointer border-r border-black/15 transition-colors last:border-r-0 hover:bg-white/15 active:bg-white/25',
+        active && 'bg-sky-300/40',
+      )}
       style={{ left: `${(index * 100) / TOTAL_KEYS}%`, width: `${100 / TOTAL_KEYS}%` }}
       aria-label={note}
     />
@@ -80,6 +98,7 @@ export function Saw() {
   const [sampler] = useState(
     () => new Tone.Sampler({ urls: { C5: '/musical-saw.wav' } }).toDestination(),
   );
+  const [activeIndex, setActiveIndex] = useState<number | null>(null);
 
   useEffect(() => {
     if (!playingNotes) return;
@@ -94,6 +113,10 @@ export function Saw() {
 
     new Tone.Part((time, value) => {
       sampler.triggerAttackRelease([value.note], '8n', time, value.velocity);
+      const keyIndex = Tone.Frequency(value.note).toMidi() - BASE_MIDI;
+      const releaseAt = time + Tone.Time('8n').toSeconds();
+      Tone.Draw.schedule(() => setActiveIndex(keyIndex), time);
+      Tone.Draw.schedule(() => setActiveIndex(current => (current === keyIndex ? null : current)), releaseAt);
       if (value.idx === eachNote.length - 1) {
         dispatch({ type: 'STOP_SONG' });
       }
@@ -103,6 +126,7 @@ export function Saw() {
 
     return () => {
       Tone.Transport.cancel();
+      setActiveIndex(null);
     };
   }, [playingNotes, sampler, dispatch]);
 
@@ -154,7 +178,13 @@ export function Saw() {
             NOTE_NAMES.map((note, i) => {
               const globalIndex = (octave - OCTAVES[0]) * NOTES_PER_OCTAVE + i;
               return (
-                <SawKey key={`${note}${octave}`} note={`${note}${octave}`} index={globalIndex} sampler={sampler} />
+                <SawKey
+                  key={`${note}${octave}`}
+                  note={`${note}${octave}`}
+                  index={globalIndex}
+                  sampler={sampler}
+                  active={globalIndex === activeIndex}
+                />
               );
             }),
           )}

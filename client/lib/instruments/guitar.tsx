@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import * as Tone from 'tone';
+import clsx from 'clsx';
 import { useAppState, useAppDispatch } from '@/lib/app-state';
 
 // Standard tuning, high string drawn on top (matches how tab is usually read).
@@ -126,10 +127,12 @@ function GuitarString({
   index,
   note,
   pluck,
+  active,
 }: {
   index: number;
   note: string;
   pluck: (index: number, note: string) => void;
+  active: boolean;
 }) {
   const rowHeight = (STRING_BOTTOM_Y - STRING_TOP_Y) / (STRINGS.length - 1);
   const y = stringY(index);
@@ -138,7 +141,10 @@ function GuitarString({
     <button
       onMouseDown={() => pluck(index, note)}
       aria-label={`${note} string`}
-      className="absolute cursor-pointer transition-colors hover:bg-amber-100/10 active:bg-amber-100/20"
+      className={clsx(
+        'absolute cursor-pointer transition-colors hover:bg-amber-100/10 active:bg-amber-100/20',
+        active && 'bg-amber-200/40',
+      )}
       style={{
         left: pct(PLUCK_X0, VB_W),
         width: pct(PLUCK_X1 - PLUCK_X0, VB_W),
@@ -160,6 +166,8 @@ export function Guitar() {
     );
   });
 
+  const [activeString, setActiveString] = useState<number | null>(null);
+
   const pluck = (index: number, note: string) => {
     plucks[index]?.triggerAttack(note);
   };
@@ -177,7 +185,11 @@ export function Guitar() {
     // Round-robin across the six strings so consecutive notes ring on
     // separate physical strings instead of cutting each other off.
     new Tone.Part((time, value) => {
-      plucks[value.idx % plucks.length]?.triggerAttack(value.note, time);
+      const stringIndex = value.idx % plucks.length;
+      plucks[stringIndex]?.triggerAttack(value.note, time);
+      const releaseAt = time + Tone.Time('8n').toSeconds();
+      Tone.Draw.schedule(() => setActiveString(stringIndex), time);
+      Tone.Draw.schedule(() => setActiveString(current => (current === stringIndex ? null : current)), releaseAt);
       if (value.idx === eachNote.length - 1) {
         dispatch({ type: 'STOP_SONG' });
       }
@@ -187,6 +199,7 @@ export function Guitar() {
 
     return () => {
       Tone.Transport.cancel();
+      setActiveString(null);
     };
   }, [playingNotes, plucks, dispatch]);
 
@@ -284,7 +297,7 @@ export function Guitar() {
         </svg>
 
         {STRINGS.map((s, i) => (
-          <GuitarString key={s.note} index={i} note={s.note} pluck={pluck} />
+          <GuitarString key={s.note} index={i} note={s.note} pluck={pluck} active={i === activeString} />
         ))}
       </div>
       <p className="max-w-md text-center text-sm text-zinc-500">

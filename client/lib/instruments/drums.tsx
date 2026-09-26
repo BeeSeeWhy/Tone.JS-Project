@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import * as Tone from 'tone';
+import clsx from 'clsx';
 import { useAppState, useAppDispatch } from '@/lib/app-state';
 
 const VB_W = 800;
@@ -60,17 +61,18 @@ function createKit() {
 }
 
 type DrumKit = ReturnType<typeof createKit>;
+type DrumPadId = 'kick' | 'tom' | 'snare' | 'hihat' | 'crash';
 
 // "Drum cover" mapping for playlist songs: drums have no pitch, so a
 // melody's notes are bucketed by MIDI range onto the kit pieces instead —
 // low notes on the kick, rising through toms/snare/hi-hat, crash on top.
-function drumHitForNote(kit: DrumKit, note: string): (time?: number) => void {
+function drumHitForNote(kit: DrumKit, note: string): { id: DrumPadId; trigger: (time?: number) => void } {
   const midi = Tone.Frequency(note).toMidi();
-  if (midi < 48) return kit.kick;
-  if (midi < 56) return kit.tom;
-  if (midi < 64) return kit.snare;
-  if (midi < 72) return time => kit.hihat(false, time);
-  return kit.crash;
+  if (midi < 48) return { id: 'kick', trigger: kit.kick };
+  if (midi < 56) return { id: 'tom', trigger: kit.tom };
+  if (midi < 64) return { id: 'snare', trigger: kit.snare };
+  if (midi < 72) return { id: 'hihat', trigger: time => kit.hihat(false, time) };
+  return { id: 'crash', trigger: kit.crash };
 }
 
 function DrumPad({
@@ -79,6 +81,7 @@ function DrumPad({
   hitR,
   label,
   onHit,
+  active,
   children,
 }: {
   cx: number;
@@ -86,6 +89,7 @@ function DrumPad({
   hitR: number;
   label: string;
   onHit: () => void;
+  active: boolean;
   children: React.ReactNode;
 }) {
   return (
@@ -96,8 +100,8 @@ function DrumPad({
         cy={cy}
         r={hitR}
         fill="white"
-        opacity={0}
-        className="transition-opacity duration-75 group-hover:opacity-10 group-active:opacity-25"
+        opacity={active ? 0.4 : 0}
+        className={clsx('transition-opacity', active ? 'duration-0' : 'duration-75 group-hover:opacity-10 group-active:opacity-25')}
       />
     </g>
   );
@@ -108,6 +112,7 @@ export function Drums() {
   const dispatch = useAppDispatch();
 
   const [kit] = useState(() => createKit());
+  const [activePad, setActivePad] = useState<DrumPadId | null>(null);
 
   useEffect(() => {
     if (!playingNotes) return;
@@ -116,7 +121,11 @@ export function Drums() {
     const noteObjs = eachNote.map((note, idx) => ({ idx, time: `+${idx / 4}`, note }));
 
     new Tone.Part((time, value) => {
-      drumHitForNote(kit, value.note)(time);
+      const { id, trigger } = drumHitForNote(kit, value.note);
+      trigger(time);
+      const releaseAt = time + 0.15;
+      Tone.Draw.schedule(() => setActivePad(id), time);
+      Tone.Draw.schedule(() => setActivePad(current => (current === id ? null : current)), releaseAt);
       if (value.idx === eachNote.length - 1) {
         dispatch({ type: 'STOP_SONG' });
       }
@@ -126,6 +135,7 @@ export function Drums() {
 
     return () => {
       Tone.Transport.cancel();
+      setActivePad(null);
     };
   }, [playingNotes, kit, dispatch]);
 
@@ -154,7 +164,14 @@ export function Drums() {
           <line x1={650} y1={200} x2={650} y2={420} stroke="#3f3f46" strokeWidth={6} />
 
           {/* hi-hat */}
-          <DrumPad cx={130} cy={195} hitR={95} label="Closed hi-hat" onHit={() => kit.hihat(false)}>
+          <DrumPad
+            cx={130}
+            cy={195}
+            hitR={95}
+            label="Closed hi-hat"
+            onHit={() => kit.hihat(false)}
+            active={activePad === 'hihat'}
+          >
             <ellipse cx={130} cy={205} rx={92} ry={16} fill="url(#cymbalMetal)" stroke="#5c4415" strokeWidth={2} />
             <ellipse cx={130} cy={188} rx={88} ry={15} fill="url(#cymbalMetal)" stroke="#5c4415" strokeWidth={2} />
           </DrumPad>
@@ -179,19 +196,19 @@ export function Drums() {
           </g>
 
           {/* crash */}
-          <DrumPad cx={650} cy={165} hitR={110} label="Crash cymbal" onHit={kit.crash}>
+          <DrumPad cx={650} cy={165} hitR={110} label="Crash cymbal" onHit={kit.crash} active={activePad === 'crash'}>
             <ellipse cx={650} cy={165} rx={110} ry={22} fill="url(#cymbalMetal)" stroke="#5c4415" strokeWidth={2} />
             <ellipse cx={650} cy={165} rx={22} ry={6} fill="#7c5e22" />
           </DrumPad>
 
           {/* rack tom */}
-          <DrumPad cx={430} cy={210} hitR={78} label="Tom" onHit={kit.tom}>
+          <DrumPad cx={430} cy={210} hitR={78} label="Tom" onHit={kit.tom} active={activePad === 'tom'}>
             <circle cx={430} cy={210} r={78} fill="url(#drumShell)" stroke="#431407" strokeWidth={3} />
             <circle cx={430} cy={210} r={58} fill="url(#drumHead)" stroke="#a8a29e" strokeWidth={2} />
           </DrumPad>
 
           {/* snare */}
-          <DrumPad cx={225} cy={340} hitR={88} label="Snare drum" onHit={kit.snare}>
+          <DrumPad cx={225} cy={340} hitR={88} label="Snare drum" onHit={kit.snare} active={activePad === 'snare'}>
             <circle cx={225} cy={340} r={88} fill="#e4e4e7" stroke="#3f3f46" strokeWidth={3} />
             <circle cx={225} cy={340} r={66} fill="url(#drumHead)" stroke="#a8a29e" strokeWidth={2} />
             {Array.from({ length: 8 }).map((_, i) => {
@@ -211,7 +228,7 @@ export function Drums() {
           </DrumPad>
 
           {/* kick */}
-          <DrumPad cx={470} cy={370} hitR={150} label="Kick drum" onHit={kit.kick}>
+          <DrumPad cx={470} cy={370} hitR={150} label="Kick drum" onHit={kit.kick} active={activePad === 'kick'}>
             <circle cx={470} cy={370} r={150} fill="url(#drumShell)" stroke="#431407" strokeWidth={4} />
             <circle cx={470} cy={370} r={115} fill="url(#drumHead)" stroke="#a8a29e" strokeWidth={2} />
             <circle cx={510} cy={390} r={20} fill="#78716c" opacity={0.5} />
